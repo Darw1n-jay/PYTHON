@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Business Inventory & Sales Management System</title>
+  <style>
+    :root{--accent:#2563eb;--muted:#6b7280}
+    html,body{margin:0;padding:0;height:100%;width:100%;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;background:#f0f4f8;color:#0f172a}
+    .wrapper{display:flex;flex-direction:column;height:100vh;width:100vw;overflow:hidden}
+    header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+    h1{font-size:22px;margin:0}
+    .muted{color:var(--muted)}
+    #app{flex:1;display:flex;flex-direction:column;overflow:auto;background:white;margin:0 10px 10px 10px;border-radius:8px;box-shadow:0 0 12px rgba(0,0,0,0.05)}
+    .nav{display:flex;gap:10px;padding:10px;border-bottom:1px solid #e5e7eb;background:#f9fafb}
+    .nav button{background:transparent;border:1px solid #e6e9ef;padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:500}
+    .nav button.active{background:var(--accent);color:white;border-color:var(--accent)}
+    section{display:none;flex:1;overflow:auto;padding:20px}
+    section.active{display:block}
+    form{display:flex;flex-direction:column;gap:8px;max-width:400px}
+    input,select{padding:8px;border-radius:8px;border:1px solid #d1d5db;font-size:14px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left}
+    .btn{padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+    .btn.primary{background:var(--accent);color:white}
+    .alert{padding:8px;border-radius:8px;background:#ecfdf5;color:#065f46}
+    footer{padding:10px;text-align:center;color:var(--muted);font-size:13px;background:#f9fafb}
+    /* Login screen full layout */
+    #loginScreen{display:flex;flex:1;height:100vh;width:100vw;}
+    .leftPanel{flex:1;background:linear-gradient(135deg,#2563eb,#1e3a8a);color:white;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px;text-align:center}
+    .leftPanel h2{font-size:28px;margin-bottom:10px}
+    .leftPanel p{max-width:360px;font-size:15px;opacity:0.9}
+    .rightPanel{flex:1;background:white;display:flex;justify-content:center;align-items:center;padding:40px}
+    .loginBox{width:100%;max-width:360px}
+    .loginBox h3{margin-bottom:12px;font-size:20px}
+  </style>
+</head>
+<body>
+  <div id="loginScreen">
+    <div class="leftPanel">
+      <h2>Business Inventory & Sales</h2>
+      <p>Centralized platform for SMEs to manage products, suppliers, customers, sales and stock — all in one dashboard.</p>
+    </div>
+    <div class="rightPanel">
+      <div class="loginBox">
+        <h3>Sign in to your account</h3>
+        <form onsubmit="return handleLogin(event)">
+          <input id="username" placeholder="Username" required />
+          <input id="password" type="password" placeholder="Password" required />
+          <button class="btn primary" type="submit" style="margin-top:8px;width:100%">Sign In</button>
+          <button class="btn" type="button" onclick="fillDemo()" style="margin-top:8px;width:100%">Sign in as Demo</button>
+        </form>
+        <div class="muted" style="margin-top:10px;font-size:13px">Demo users: <b>admin / admin123</b> or <b>staff / staff123</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrapper" id="mainWrapper" style="display:none;">
+    <header>
+      <h1>Business Inventory & Sales</h1>
+      <div>
+        <span id="userBadge" class="muted">Not logged in</span>
+        <button class="btn" onclick="logout()">Logout</button>
+      </div>
+    </header>
+
+    <div id="app">
+      <div class="nav">
+        <button class="active" data-target="dashboardSection" onclick="switchTab(event)">Dashboard</button>
+        <button data-target="productsSection" onclick="switchTab(event)">Products</button>
+        <button data-target="salesSection" onclick="switchTab(event)">Sales</button>
+        <button data-target="reportsSection" onclick="switchTab(event)">Reports</button>
+        <button data-target="settingsSection" onclick="switchTab(event)">Settings</button>
+      </div>
+
+      <section id="dashboardSection" class="active">
+        <h2>Dashboard</h2>
+        <p>Welcome! Here’s a summary of your business activity.</p>
+        <div id="dashboardSummary"></div>
+      </section>
+
+      <section id="productsSection">
+        <h2>Products</h2>
+        <form id="addProductForm" onsubmit="return addProduct(event)">
+          <input id="productName" placeholder="Product name" required />
+          <input id="productStock" type="number" placeholder="Stock" min="0" value="0" required />
+          <button class="btn primary" type="submit">Add Product</button>
+        </form>
+        <table id="productsTable"><thead><tr><th>#</th><th>Name</th><th>Stock</th><th>Actions</th></tr></thead><tbody></tbody></table>
+      </section>
+
+      <section id="salesSection">
+        <h2>Sales</h2>
+        <form id="saleForm" onsubmit="return recordSale(event)">
+          <select id="saleProduct" required></select>
+          <input id="saleQty" type="number" min="1" value="1" required />
+          <button class="btn primary" type="submit">Record Sale</button>
+        </form>
+        <table id="salesTable"><thead><tr><th>#</th><th>Product</th><th>Qty</th><th>When</th></tr></thead><tbody></tbody></table>
+      </section>
+
+      <section id="reportsSection">
+        <h2>Reports</h2>
+        <button class="btn primary" onclick="generateSimpleReport()">Generate Summary</button>
+        <div id="reportOutput" style="margin-top:10px"></div>
+      </section>
+
+      <section id="settingsSection">
+        <h2>Settings</h2>
+        <table><thead><tr><th>User</th><th>Actions</th></tr></thead><tbody id="usersTable"></tbody></table>
+      </section>
+    </div>
+
+    <footer>
+      &copy; 2025 Business Inventory & Sales Management System — Demo Mode
+    </footer>
+  </div>
+
+  <script>
+    const users={admin:'admin123',staff:'staff123'};let currentUser=null;let products=[];let sales=[];const $=id=>document.getElementById(id);
+
+    function fillDemo(){ $('username').value='admin'; $('password').value='admin123'; }
+    function handleLogin(e){ e.preventDefault(); const u=$('username').value.trim(),p=$('password').value; if(users[u]===p){ currentUser=u; $('userBadge').textContent='Signed in: '+u; $('loginScreen').style.display='none'; $('mainWrapper').style.display='flex'; renderAll(); } else alert('Invalid login'); return false; }
+    function logout(){ if(confirm('Logout?')){ currentUser=null; $('loginScreen').style.display='flex'; $('mainWrapper').style.display='none'; $('username').value=''; $('password').value=''; }}
+
+    function switchTab(e){ const t=e.currentTarget.getAttribute('data-target'); document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active')); e.currentTarget.classList.add('active'); document.querySelectorAll('#app section').forEach(s=>s.classList.remove('active')); $(t).classList.add('active'); if(t==='dashboardSection') updateDashboard(); }
+
+    function addProduct(e){ e.preventDefault(); const n=$('productName').value.trim(),s=parseInt($('productStock').value,10)||0; if(!n)return; const id=Date.now(); products.push({id,name:n,stock:s}); $('productName').value=''; $('productStock').value='0'; renderProducts(); updateDashboard(); return false; }
+    function renderProducts(){ const tb=document.querySelector('#productsTable tbody'); tb.innerHTML=''; products.forEach((p,i)=>{ tb.innerHTML+=`<tr><td>${i+1}</td><td>${p.name}</td><td>${p.stock}</td><td><button onclick="adjustStock(${p.id},1)">+</button> <button onclick="adjustStock(${p.id},-1)">-</button> <button onclick="removeProduct(${p.id})">Remove</button></td></tr>`; }); const sel=$('saleProduct'); sel.innerHTML=''; products.forEach(p=>sel.innerHTML+=`<option value="${p.id}">${p.name} (stock:${p.stock})</option>`); }
+    function adjustStock(id,delta){ const p=products.find(x=>x.id===id); if(p){p.stock=Math.max(0,p.stock+delta); renderProducts(); updateDashboard();} }
+    function removeProduct(id){ products=products.filter(p=>p.id!==id); renderProducts(); updateDashboard(); }
+
+    function recordSale(e){ e.preventDefault(); const pid=parseInt($('saleProduct').value,10),qty=parseInt($('saleQty').value,10); const p=products.find(x=>x.id===pid); if(!p)return; if(p.stock<qty)return alert('Not enough stock'); p.stock-=qty; sales.push({id:Date.now(),pid,qty,when:new Date()}); renderProducts(); renderSales(); updateDashboard(); return false; }
+    function renderSales(){ const tb=document.querySelector('#salesTable tbody'); tb.innerHTML=''; sales.forEach((s,i)=>{ const p=products.find(x=>x.id===s.pid)||{name:'(deleted)'}; tb.innerHTML+=`<tr><td>${i+1}</td><td>${p.name}</td><td>${s.qty}</td><td>${new Date(s.when).toLocaleString()}</td></tr>`; }); }
+
+    function generateSimpleReport(){ if(!sales.length){$('reportOutput').innerHTML='<p>No sales yet.</p>';return;} const map={}; sales.forEach(s=>{const p=products.find(x=>x.id===s.pid)||{name:'(deleted)'};map[p.name]=(map[p.name]||0)+s.qty;}); let h='<table><thead><tr><th>Product</th><th>Total Sold</th></tr></thead><tbody>'; Object.entries(map).forEach(([n,q])=>h+=`<tr><td>${n}</td><td>${q}</td></tr>`); h+='</tbody></table>'; $('reportOutput').innerHTML=h; }
+
+    function renderUsers(){ const tb=$('usersTable'); tb.innerHTML=''; Object.keys(users).forEach(u=>tb.innerHTML+=`<tr><td>${u}</td><td><button onclick="resetPassword('${u}')">Reset Password</button></td></tr>`); }
+    function resetPassword(u){ const pw=prompt('Enter new password for '+u); if(pw){users[u]=pw;alert('Password updated.');}}
+
+    function updateDashboard(){ const totalProd=products.length; const totalStock=products.reduce((a,b)=>a+b.stock,0); const totalSales=sales.reduce((a,b)=>a+b.qty,0); $('dashboardSummary').innerHTML=`<p><b>Products:</b> ${totalProd}</p><p><b>Total Stock:</b> ${totalStock}</p><p><b>Items Sold:</b> ${totalSales}</p>`; }
+
+    function renderAll(){ renderProducts(); renderSales(); renderUsers(); updateDashboard(); }
+  </script>
+</body>
+</html>
