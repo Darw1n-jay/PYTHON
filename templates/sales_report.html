@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Report - Business Inventory System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #2c3e50, #3498db);
+      margin: 0;
+      padding: 0;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      background-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 40px 50px;
+      width: 90%;
+      max-width: 700px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 1s ease-in-out;
+      text-align: center;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      margin-bottom: 20px;
+    }
+
+    .report-box {
+      background-color: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 25px;
+      font-size: 1.1rem;
+      margin-top: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .report-box strong {
+      color: #00ffb3;
+    }
+
+    .btn {
+      margin-top: 20px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+    }
+
+    .btn:hover {
+      background-color: #2980b9;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📊 Sales Report</h2>
+    <div class="report-box">
+      <p><strong>Daily Sales:</strong> ₱{{ "%.2f"|format(daily_sales) }}</p>
+      <p><strong>Weekly Sales:</strong> ₱{{ "%.2f"|format(weekly_sales) }}</p>
+      <p><strong>Monthly Sales:</strong> ₱{{ "%.2f"|format(monthly_sales) }}</p>
+    </div>
+    
+    {% if recent_sales %}
+    <div style="margin-top: 20px; background-color: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 8px;">
+      <h3>Recent Sales</h3>
+      <table style="width: 100%; margin-top: 10px;">
+        <tr><th>Product</th><th>Quantity</th><th>Total</th><th>Date</th></tr>
+        {% for sale in recent_sales %}
+        <tr>
+          <td>{{ sale[0] }}</td>
+          <td>{{ sale[1] }}</td>
+          <td>₱{{ "%.2f"|format(sale[2]) }}</td>
+          <td>{{ sale[3][:16] }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% endif %}
+    
+    <a href="{{ url_for('admin_dashboard') }}" class="btn" style="text-decoration: none; display: inline-block;">← Back to Dashboard</a>
+  </div>
+</body>
+</html>

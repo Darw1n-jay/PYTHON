@@ -1,105 +1,269 @@
-users = {
-    "admin": {"password": "admin123", "role": "admin"},
-    "staff": {"password": "staff123", "role": "staff"}
-}
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+import sqlite3
+from datetime import datetime
+import os
 
-products = []
-sales = []
+app = Flask(__name__)
+app.secret_key = 'your-secret-key-here'
 
+# Initialize database
+def init_db():
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    
+    # Users table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL
+        )
+    ''')
+    
+    # Products table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            price REAL NOT NULL,
+            stock INTEGER NOT NULL
+        )
+    ''')
+    
+    # Sales table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sales (
+            id INTEGER PRIMARY KEY,
+            product_id INTEGER,
+            quantity INTEGER,
+            total_price REAL,
+            sale_date DATETIME,
+            FOREIGN KEY (product_id) REFERENCES products (id)
+        )
+    ''')
+    
+    # Insert default users if they don't exist
+    cursor.execute('SELECT COUNT(*) FROM users')
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', 
+                      ('admin', 'admin123', 'admin'))
+        cursor.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', 
+                      ('staff', 'staff123', 'staff'))
+    
+    conn.commit()
+    conn.close()
+
+@app.route('/')
+def index():
+    return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    print("=== Business Inventory and Sales Management System ===")
-    username = input("Username: ")
-    password = input("Password: ")
-    if username in users and users[username]["password"] == password:
-        role = users[username]["role"]
-        print(f"\n✅ Login successful! Welcome, {username.capitalize()} ({role.upper()})\n")
-        main_menu(role)
-    else:
-        print("\n❌ Invalid credentials.\n")
-        login()
-
-def main_menu(role):
-    while True:
-        print("========= MAIN MENU =========")
-        if role == "admin":
-            print("1. Manage Products")
-            print("2. Record Sale")
-            print("3. View Reports")
-            print("4. Manage Users")
-            print("5. Logout")
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        conn = sqlite3.connect('inventory.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM users WHERE username = ? AND password = ?', 
+                      (username, password))
+        user = cursor.fetchone()
+        conn.close()
+        
+        if user:
+            session['user_id'] = user[0]
+            session['username'] = user[1]
+            session['role'] = user[3]
+            
+            if user[3] == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            else:
+                return redirect(url_for('staff_dashboard'))
         else:
-            print("1. Record Sale")
-            print("2. Logout")
-        choice = input("Select option: ")
-        if role == "admin":
-            if choice == "1": manage_products()
-            elif choice == "2": record_sale()
-            elif choice == "3": view_reports()
-            elif choice == "4": manage_users()
-            elif choice == "5": print("Logged out.\n"); break
-            else: print("❌ Invalid choice.\n")
-        else:
-            if choice == "1": record_sale()
-            elif choice == "2": print("Logged out.\n"); break
-            else: print("❌ Invalid choice.\n")
+            flash('Invalid credentials!')
+    
+    return render_template('login.html')
 
+@app.route('/admin_dashboard')
+def admin_dashboard():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return redirect(url_for('login'))
+    
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    
+    # Get statistics
+    cursor.execute('SELECT COUNT(*) FROM products')
+    total_products = cursor.fetchone()[0]
+    
+    cursor.execute('SELECT SUM(total_price) FROM sales WHERE DATE(sale_date) = DATE("now")')
+    daily_sales = cursor.fetchone()[0] or 0
+    
+    cursor.execute('SELECT COUNT(*) FROM users WHERE role = "staff"')
+    staff_count = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    return render_template('admin_dashboard.html', 
+                         total_products=total_products,
+                         daily_sales=daily_sales,
+                         staff_count=staff_count)
+
+@app.route('/staff_dashboard')
+def staff_dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    
+    # Get statistics
+    cursor.execute('SELECT COUNT(*) FROM products')
+    total_products = cursor.fetchone()[0]
+    
+    cursor.execute('SELECT SUM(total_price) FROM sales WHERE DATE(sale_date) = DATE("now")')
+    daily_sales = cursor.fetchone()[0] or 0
+    
+    conn.close()
+    
+    return render_template('staff_dashboard.html',
+                         total_products=total_products,
+                         daily_sales=daily_sales)
+
+@app.route('/manage_products')
 def manage_products():
-    while True:
-        print("\n=== Manage Products ===")
-        print("1. View Products")
-        print("2. Add Product")
-        print("3. Remove Product")
-        print("4. Back")
-        choice = input("Choose: ")
-        if choice == "1":
-            if not products: print("No products.\n")
-            else:
-                for i, p in enumerate(products, 1):
-                    print(f"{i}. {p}")
-        elif choice == "2":
-            name = input("Enter product name: ")
-            products.append(name)
-            print(f"Added: {name}")
-        elif choice == "3":
-            if not products: print("No products to remove.\n")
-            else:
-                for i, p in enumerate(products, 1): print(f"{i}. {p}")
-                try:
-                    idx = int(input("Enter product number: "))
-                    removed = products.pop(idx - 1)
-                    print(f"Removed: {removed}")
-                except: print("Invalid input.")
-        elif choice == "4": break
-        else: print("❌ Invalid choice.\n")
+    if 'user_id' not in session or session['role'] != 'admin':
+        return redirect(url_for('login'))
+    
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM products')
+    products = cursor.fetchall()
+    conn.close()
+    
+    return render_template('manage_products.html', products=products)
 
+@app.route('/add_product', methods=['POST'])
+def add_product():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return redirect(url_for('login'))
+    
+    name = request.form['name']
+    price = float(request.form['price'])
+    stock = int(request.form['stock'])
+    
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO products (name, price, stock) VALUES (?, ?, ?)',
+                  (name, price, stock))
+    conn.commit()
+    conn.close()
+    
+    flash('Product added successfully!')
+    return redirect(url_for('manage_products'))
+
+@app.route('/delete_product/<int:product_id>')
+def delete_product(product_id):
+    if 'user_id' not in session or session['role'] != 'admin':
+        return redirect(url_for('login'))
+    
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM products WHERE id = ?', (product_id,))
+    conn.commit()
+    conn.close()
+    
+    flash('Product deleted successfully!')
+    return redirect(url_for('manage_products'))
+
+@app.route('/sales_report')
+def sales_report():
+    if 'user_id' not in session or session['role'] != 'admin':
+        return redirect(url_for('login'))
+    
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    
+    # Get sales statistics
+    cursor.execute('SELECT SUM(total_price) FROM sales WHERE DATE(sale_date) = DATE("now")')
+    daily_sales = cursor.fetchone()[0] or 0
+    
+    cursor.execute('SELECT SUM(total_price) FROM sales WHERE DATE(sale_date) >= DATE("now", "-7 days")')
+    weekly_sales = cursor.fetchone()[0] or 0
+    
+    cursor.execute('SELECT SUM(total_price) FROM sales WHERE DATE(sale_date) >= DATE("now", "-30 days")')
+    monthly_sales = cursor.fetchone()[0] or 0
+    
+    # Get recent sales
+    cursor.execute('''
+        SELECT p.name, s.quantity, s.total_price, s.sale_date 
+        FROM sales s 
+        JOIN products p ON s.product_id = p.id 
+        ORDER BY s.sale_date DESC LIMIT 10
+    ''')
+    recent_sales = cursor.fetchall()
+    
+    conn.close()
+    
+    return render_template('sales_report.html',
+                         daily_sales=daily_sales,
+                         weekly_sales=weekly_sales,
+                         monthly_sales=monthly_sales,
+                         recent_sales=recent_sales)
+
+@app.route('/record_sale', methods=['GET', 'POST'])
 def record_sale():
-    if not products:
-        print("No products available.\n")
-        return
-    print("\n=== Record Sale ===")
-    for i, p in enumerate(products, 1):
-        print(f"{i}. {p}")
-    try:
-        idx = int(input("Select product: "))
-        qty = int(input("Enter quantity: "))
-        sales.append({"product": products[idx - 1], "quantity": qty})
-        print(f"Sale recorded: {qty} x {products[idx - 1]}\n")
-    except: print("Invalid input.\n")
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        product_id = int(request.form['product_id'])
+        quantity = int(request.form['quantity'])
+        
+        conn = sqlite3.connect('inventory.db')
+        cursor = conn.cursor()
+        
+        # Get product details
+        cursor.execute('SELECT price, stock FROM products WHERE id = ?', (product_id,))
+        product = cursor.fetchone()
+        
+        if product and product[1] >= quantity:
+            price = product[0]
+            total_price = price * quantity
+            
+            # Record sale
+            cursor.execute('''
+                INSERT INTO sales (product_id, quantity, total_price, sale_date) 
+                VALUES (?, ?, ?, ?)
+            ''', (product_id, quantity, total_price, datetime.now()))
+            
+            # Update stock
+            cursor.execute('UPDATE products SET stock = stock - ? WHERE id = ?',
+                          (quantity, product_id))
+            
+            conn.commit()
+            flash('Sale recorded successfully!')
+        else:
+            flash('Insufficient stock!')
+        
+        conn.close()
+        return redirect(url_for('record_sale'))
+    
+    # GET request - show form
+    conn = sqlite3.connect('inventory.db')
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM products WHERE stock > 0')
+    products = cursor.fetchall()
+    conn.close()
+    
+    return render_template('record_sale.html', products=products)
 
-def view_reports():
-    print("\n=== Sales Report ===")
-    if not sales:
-        print("No sales yet.\n")
-    else:
-        for i, s in enumerate(sales, 1):
-            print(f"{i}. {s['product']} - {s['quantity']} pcs")
-    print()
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
-def manage_users():
-    print("\n=== Manage Users ===")
-    for name, data in users.items():
-        print(f"{name} ({data['role']})")
-    print()
-
-if __name__ == "__main__":
-    login()
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True)

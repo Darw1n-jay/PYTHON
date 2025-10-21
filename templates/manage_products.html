@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Products - Business Inventory System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #2c3e50, #3498db);
+      margin: 0;
+      padding: 0;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .container {
+      background-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 30px 40px;
+      width: 90%;
+      max-width: 900px;
+      margin-top: 60px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background-color: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: center;
+    }
+
+    th {
+      background-color: rgba(0, 0, 0, 0.3);
+      color: #fff;
+    }
+
+    tr:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+      transition: 0.3s;
+    }
+
+    .actions {
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .btn {
+      background-color: #3498db;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      margin: 5px;
+    }
+
+    .btn:hover {
+      background-color: #2980b9;
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 600px) {
+      .container {
+        padding: 20px;
+      }
+      table, th, td {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>📦 Manage Products</h2>
+    
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div style="margin-bottom: 15px; color: #00ffb3;">
+          {% for message in messages %}
+            <p>{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    
+    <!-- Add Product Form -->
+    <div style="margin-bottom: 20px; background-color: rgba(255, 255, 255, 0.1); padding: 20px; border-radius: 8px;">
+      <h3>Add New Product</h3>
+      <form method="post" action="{{ url_for('add_product') }}" style="display: flex; gap: 10px; align-items: end;">
+        <div>
+          <label>Name:</label>
+          <input type="text" name="name" required style="padding: 8px; border-radius: 4px; border: none;">
+        </div>
+        <div>
+          <label>Price:</label>
+          <input type="number" step="0.01" name="price" required style="padding: 8px; border-radius: 4px; border: none;">
+        </div>
+        <div>
+          <label>Stock:</label>
+          <input type="number" name="stock" required style="padding: 8px; border-radius: 4px; border: none;">
+        </div>
+        <button type="submit" class="btn">➕ Add</button>
+      </form>
+    </div>
+
+    <table>
+      <tr><th>ID</th><th>Product Name</th><th>Price</th><th>Stock</th><th>Actions</th></tr>
+      {% for product in products %}
+      <tr>
+        <td>{{ product[0] }}</td>
+        <td>{{ product[1] }}</td>
+        <td>₱{{ "%.2f"|format(product[2]) }}</td>
+        <td>{{ product[3] }}</td>
+        <td>
+          <a href="{{ url_for('delete_product', product_id=product[0]) }}" 
+             onclick="return confirm('Are you sure?')" 
+             style="color: #ff6b6b; text-decoration: none;">🗑️ Delete</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+
+    <div class="actions">
+      <a href="{{ url_for('admin_dashboard') }}" class="btn" style="text-decoration: none; display: inline-block;">← Back to Dashboard</a>
+    </div>
+  </div>
+</body>
+</html>

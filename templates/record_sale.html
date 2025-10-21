@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Record Sale - Business Inventory System</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #2c3e50, #3498db);
+      margin: 0;
+      padding: 0;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      background-color: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 40px 50px;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    label {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    select, input {
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      background-color: rgba(255, 255, 255, 0.9);
+      color: #333;
+    }
+
+    .btn {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 25px;
+      font-size: 1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 600;
+      margin-top: 10px;
+    }
+
+    .btn:hover {
+      background-color: #2980b9;
+      transform: scale(1.05);
+    }
+
+    .back-btn {
+      background-color: #95a5a6;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+      margin-top: 15px;
+    }
+
+    .back-btn:hover {
+      background-color: #7f8c8d;
+    }
+
+    .products-table {
+      margin-top: 20px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    th {
+      background-color: rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>🧾 Record Sale</h2>
+    
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div style="margin-bottom: 15px; color: #00ffb3; text-align: center;">
+          {% for message in messages %}
+            <p>{{ message }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% if products %}
+    <form method="post">
+      <label for="product_id">Select Product:</label>
+      <select name="product_id" required>
+        <option value="">Choose a product...</option>
+        {% for product in products %}
+        <option value="{{ product[0] }}">{{ product[1] }} - ₱{{ "%.2f"|format(product[2]) }} (Stock: {{ product[3] }})</option>
+        {% endfor %}
+      </select>
+
+      <label for="quantity">Quantity:</label>
+      <input type="number" name="quantity" min="1" required>
+
+      <button type="submit" class="btn">Record Sale</button>
+    </form>
+
+    <div class="products-table">
+      <h3>Available Products</h3>
+      <table>
+        <tr><th>Product</th><th>Price</th><th>Stock</th></tr>
+        {% for product in products %}
+        <tr>
+          <td>{{ product[1] }}</td>
+          <td>₱{{ "%.2f"|format(product[2]) }}</td>
+          <td>{{ product[3] }}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+    {% else %}
+    <p style="text-align: center; color: #ff6b6b;">No products available for sale.</p>
+    {% endif %}
+
+    {% if session.role == 'admin' %}
+    <a href="{{ url_for('admin_dashboard') }}" class="btn back-btn">← Back to Dashboard</a>
+    {% else %}
+    <a href="{{ url_for('staff_dashboard') }}" class="btn back-btn">← Back to Dashboard</a>
+    {% endif %}
+  </div>
+</body>
+</html>
